@@ -1,0 +1,20 @@
+{
+  "name": "releaseguard",
+  "version": "1.0.0",
+  "description": "A TypeScript CLI that benchmarks an API before and after a code change, compares performance and automatically fails a GitHub Actions check if the new version performs significantly worse.",
+  "main": "index.js",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
