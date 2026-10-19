@@ -1,0 +1,83 @@
+name: ReleaseGuard
+
+on:
+  workflow_dispatch:
+    inputs:
+      current_url:
+        description: "Baseline (current/production) URL"
+        required: true
+        type: string
+      update_url:
+        description: "Candidate (update) URL"
+        required: true
+        type: string
+  pull_request:
+    branches: [main]
+
+jobs:
+  releaseguard:
+    name: Benchmark current vs update
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve URLs
+        id: urls
+        env:
+          INPUT_CURRENT: ${{ inputs.current_url }}
+          INPUT_UPDATE: ${{ inputs.update_url }}
+          SECRET_CURRENT: ${{ secrets.RELEASEGUARD_CURRENT_URL }}
+          SECRET_UPDATE: ${{ secrets.RELEASEGUARD_UPDATE_URL }}
+        run: |
+          CURRENT_URL="${INPUT_CURRENT:-$SECRET_CURRENT}"
+          UPDATE_URL="${INPUT_UPDATE:-$SECRET_UPDATE}"
+
+          if [ -z "$CURRENT_URL" ] || [ -z "$UPDATE_URL" ]; then
+            echo "::error::Set workflow inputs (manual run) or repository secrets RELEASEGUARD_CURRENT_URL and RELEASEGUARD_UPDATE_URL (PR runs)."
+            exit 1
+          fi
+
+          echo "current_url=$CURRENT_URL" >> "$GITHUB_OUTPUT"
+          echo "update_url=$UPDATE_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Run ReleaseGuard
+        id: benchmark
+        run: npm start -- "${{ steps.urls.outputs.current_url }}" "${{ steps.urls.outputs.update_url }}"
+        continue-on-error: true
+
+      - name: Write report to workflow summary
+        if: always()
+        run: |
+          REPORT=$(ls -t releaseguard-report-*.md 2>/dev/null | head -n 1 || true)
+          if [ -z "$REPORT" ]; then
+            echo "## ReleaseGuard" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "_No report file was generated._" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+          echo "Posted $REPORT to the workflow summary"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: releaseguard-report
+          path: releaseguard-report-*.md
+          if-no-files-found: warn
+
+      - name: Fail if benchmark failed
+        if: steps.benchmark.outcome == 'failure'
+        run: exit 1
