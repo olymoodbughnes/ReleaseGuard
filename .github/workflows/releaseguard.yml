@@ -81,3 +81,52 @@ jobs:
       - name: Fail if benchmark failed
         if: steps.benchmark.outcome == 'failure'
         run: exit 1
+
+  k6:
+    name: k6 load test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve URL
+        id: urls
+        env:
+          INPUT_UPDATE: ${{ inputs.update_url }}
+          SECRET_UPDATE: ${{ secrets.RELEASEGUARD_UPDATE_URL }}
+        run: |
+          UPDATE_URL="${INPUT_UPDATE:-$SECRET_UPDATE}"
+
+          if [ -z "$UPDATE_URL" ]; then
+            echo "::error::Set workflow input update_url (manual run) or repository secret RELEASEGUARD_UPDATE_URL (PR runs)."
+            exit 1
+          fi
+
+          echo "update_url=$UPDATE_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Install k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Load test update
+        id: k6
+        continue-on-error: true
+        env:
+          BASE_URL: ${{ steps.urls.outputs.update_url }}
+        run: k6 run k6/load-test.js
+
+      - name: Write k6 results to workflow summary
+        if: always()
+        run: |
+          {
+            echo "## k6 load test"
+            echo ""
+            echo "| Target | URL | Result |"
+            echo "| --- | --- | --- |"
+            echo "| Update | \`${{ steps.urls.outputs.update_url }}\` | ${{ steps.k6.outcome }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail if k6 failed
+        if: steps.k6.outcome == 'failure'
+        run: exit 1
