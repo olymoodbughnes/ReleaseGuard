@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log*
+.git
+.github
+.gitignore
+.env
+.env.*
+*.md
+!README.md
+releaseguard-report-*.md
+dist
+coverage
+.vscode
+.idea
+*.tsbuildinfo
+.DS_Store
+LICENSE
