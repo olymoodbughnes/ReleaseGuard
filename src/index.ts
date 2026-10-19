@@ -237,8 +237,8 @@ function generateReport(
     "",
     `- **Current:** ${currentUrl}`,
     `- **Update:** ${updateUrl}`,
-    `- **Runs per URL:** ${RUNS_PER_URL} (alternating)`,
-    `- **Requests per URL:** ${current.totalRequests}`,
+    `- **Request pattern:** ${RUNS_PER_URL} rounds — each round sends ${REQUEST_COUNT} sequential requests to **current**, then ${REQUEST_COUNT} to **update**`,
+    `- **Total requests per URL:** ${current.totalRequests}`,
     "",
     "## Thresholds",
     "",
@@ -362,8 +362,10 @@ function printComparisonReport(
   console.log("=== Comparison Report ===");
   console.log(`Current: ${currentUrl}`);
   console.log(`Update:  ${updateUrl}`);
-  console.log(`Runs per URL: ${RUNS_PER_URL} (alternating)`);
-  console.log(`Requests per URL: ${current.totalRequests}`);
+  console.log(
+    `Request pattern: ${RUNS_PER_URL} rounds — each round sends ${REQUEST_COUNT} sequential requests to current, then ${REQUEST_COUNT} to update`,
+  );
+  console.log(`Total requests per URL: ${current.totalRequests}`);
   console.log(`Latency limit: +${MAX_LATENCY_INCREASE_PERCENT}%`);
   console.log(`Error-rate limit: ${MAX_ERROR_RATE_PERCENT}%\n`);
   console.log(formatRow(rows[0]!));
