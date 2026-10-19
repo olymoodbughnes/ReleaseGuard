@@ -116,16 +116,32 @@ jobs:
           BASE_URL: ${{ steps.urls.outputs.update_url }}
         run: k6 run k6/load-test.js
 
-      - name: Write k6 results to workflow summary
+      - name: Write k6 report to workflow summary
         if: always()
         run: |
-          {
-            echo "## k6 load test"
-            echo ""
-            echo "| Target | URL | Result |"
-            echo "| --- | --- | --- |"
-            echo "| Update | \`${{ steps.urls.outputs.update_url }}\` | ${{ steps.k6.outcome }} |"
-          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -f k6-report.md ]; then
+            cat k6-report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "## k6 load test"
+              echo ""
+              echo "_No k6 report was generated._"
+              echo ""
+              echo "| Target | URL | Result |"
+              echo "| --- | --- | --- |"
+              echo "| Update | \`${{ steps.urls.outputs.update_url }}\` | ${{ steps.k6.outcome }} |"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload k6 report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-report
+          path: |
+            k6-report.md
+            k6-report-*.md
+          if-no-files-found: warn
 
       - name: Fail if k6 failed
         if: steps.k6.outcome == 'failure'
